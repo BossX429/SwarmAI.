@@ -1,37 +1,42 @@
 name: CodeQL Security Scanning
-
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
   schedule:
-    - cron: '0 2 * * 1'  # 2 AM UTC every Monday
-
+    - cron: '0 2 * * 1'
 permissions:
   contents: read
   security-events: write
   actions: read
-
 jobs:
   analyze:
-    name: Analyze Python Code
+    name: Analyze Code (CodeQL)
     runs-on: ubuntu-latest
-    
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['python']
     steps:
-      - name: Checkout code
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332  # v4.1.7
-      
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@afb54ba388a7dca6ecae48f608c4ff05ff4cc77a  # v3.25.15
+        uses: github/codeql-action/init@afb54ba388a7dca6ecae48f608c4ff05ff4cc77a
         with:
-          languages: python
+          languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
-      
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@afb54ba388a7dca6ecae48f608c4ff05ff4cc77a  # v3.25.15
-      
+      - name: Setup language toolchains
+        run: |
+          if [[ "${{ matrix.language }}" == "rust" ]]; then
+            rustup toolchain install stable --profile minimal
+            rustup default stable
+          fi
+      - name: Build for analysis
+        run: |
+          if [[ "${{ matrix.language }}" == "rust" ]]; then
+            cargo build --all --verbose || true
+          fi
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@afb54ba388a7dca6ecae48f608c4ff05ff4cc77a  # v3.25.15
+        uses: github/codeql-action/analyze@afb54ba388a7dca6ecae48f608c4ff05ff4cc77a
         with:
-          category: "/language:python"
+          category: "/language:${{ matrix.language }}"
