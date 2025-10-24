@@ -1,0 +1,26 @@
+name: Auto-Merge
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'auto-merge')
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+      - uses: actions/github-script@60a0d83039c7499ae640ae8a5c4a1a8c1b9c1f2f
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) return core.setFailed('No PR context');
+            const {owner, repo} = context.repo;
+            const checks = await github.rest.checks.listForRef({owner, repo, ref: pr.head.sha});
+            if (checks.data.check_runs.some(c => c.conclusion !== 'success')) {
+              core.setFailed('Checks not green');
+              return;
+            }
+            await github.rest.pulls.merge({ owner, repo, pull_number: pr.number, merge_method: 'squash' });
+'
