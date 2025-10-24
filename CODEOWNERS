@@ -1,0 +1,6 @@
+# Default owner
+* @BossX429
+
+# Protect critical areas
+.github/workflows/ @BossX429
+**/src/** @BossX429
